@@ -583,7 +583,7 @@ function createProgressIndicator(field) {
         border-radius: 6px !important;
         padding: 5px 10px !important;
         cursor: pointer !important;
-        margin-top: 8px !important;
+        margin-left: 8px !important;
         margin-bottom: 8px !important;
         display: block !important;
       }
