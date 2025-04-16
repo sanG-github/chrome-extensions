@@ -16,17 +16,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Polish comment using AI API
 async function polishComment(comment, commentType) {
   // Retrieve API settings from storage
-  const data = await chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'apiProvider']);
+  const data = await chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'apiProvider', 'customGuidelines']);
   const apiKey = data.apiKey;
   const apiEndpoint = data.apiEndpoint || 'https://api.deepseek.com/v1/chat/completions';
   const apiProvider = data.apiProvider || 'deepseek';
+  const customGuidelines = data.customGuidelines || '';
   
   if (!apiKey) {
     throw new Error('API key not set. Please set it in the extension settings.');
   }
   
-  // Create system prompt based on comment type
-  const systemPrompt = createSystemPrompt(commentType);
+  // Create system prompt based on comment type and custom guidelines
+  const systemPrompt = createSystemPrompt(commentType, customGuidelines);
   
   // Send to selected AI API
   switch (apiProvider.toLowerCase()) {
@@ -39,8 +40,8 @@ async function polishComment(comment, commentType) {
   }
 }
 
-// Create system prompt based on comment type
-function createSystemPrompt(commentType) {
+// Create system prompt based on comment type and custom guidelines
+function createSystemPrompt(commentType, customGuidelines = '') {
   const basePrompt = `You're a comment polisher for GitHub pull request reviews following Nimble's PR feedback guidelines.
   
 Your task is to polish the provided comment to make it more courteous, respectful, clear, and helpful while preserving its original meaning.
@@ -54,16 +55,23 @@ General guidelines:
 - Be humble ("I'm not sure - let's look it up.")
 - Ask for clarification when needed ("I didn't understand. Can you clarify?")
 - Avoid selective ownership of code (no "mine", "not mine", "yours")
-- Avoid making demands, use suggestions instead
 - Avoid subjective opinions
 - Avoid terms that could be seen as referring to personal traits
 - Don't use hyperbole ("always", "never", "endlessly", "nothing")
-- Add appropriate emoji icons to bring joy without being excessive`;
+- Add appropriate emoji icons to bring joy without being excessive
+- Use diverse words to express the same meaning, avoid using the same words repeatedly, can use some advanced words to make the comment more professional.
+- Don't use a forceful tone, use a recommending tone because the author may have his own reasons or be responsible for the implementation.`;
+
+  // Add custom guidelines if any
+  let prompt = basePrompt;
+  if (customGuidelines && customGuidelines.trim()) {
+    prompt += `\n\nCustom guidelines provided by the user:\n${customGuidelines.trim()}`;
+  }
 
   // Add type-specific guidelines
   switch (commentType) {
     case 'review':
-      return `${basePrompt}
+      return `${prompt}
       
 For review feedback specifically:
 - Explain the reasoning WHY
@@ -77,7 +85,7 @@ For review feedback specifically:
 Remember, return ONLY the polished comment text with no explanations or headers.`;
       
     case 'response':
-      return `${basePrompt}
+      return `${prompt}
       
 For responding to feedback specifically:
 - Be grateful for suggestions (e.g., "Good idea. I will make that change.")
@@ -89,7 +97,7 @@ For responding to feedback specifically:
 Remember, return ONLY the polished comment text with no explanations or headers.`;
       
     case 'approval':
-      return `${basePrompt}
+      return `${prompt}
       
 For approval comments specifically:
 - For pre-approval with minor changes, use specific prefixes like:
@@ -101,7 +109,7 @@ For approval comments specifically:
 Remember, return ONLY the polished comment text with no explanations or headers.`;
       
     default:
-      return `${basePrompt}
+      return `${prompt}
       
 Remember, return ONLY the polished comment text with no explanations or headers.`;
   }

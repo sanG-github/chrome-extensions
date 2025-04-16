@@ -6,6 +6,8 @@ const toggleVisibilityButton = document.getElementById('toggle-visibility');
 const saveButton = document.getElementById('save-button');
 const resetButton = document.getElementById('reset-button');
 const statusDiv = document.getElementById('status');
+const customGuidelinesTextarea = document.getElementById('custom-guidelines');
+const saveGuidelinesButton = document.getElementById('save-guidelines-button');
 
 // Default endpoints for different providers
 const DEFAULT_ENDPOINTS = {
@@ -21,6 +23,7 @@ apiProviderSelect.addEventListener('change', updateEndpointPlaceholder);
 toggleVisibilityButton.addEventListener('click', togglePasswordVisibility);
 saveButton.addEventListener('click', saveSettings);
 resetButton.addEventListener('click', resetSettings);
+saveGuidelinesButton.addEventListener('click', saveCustomGuidelines);
 
 // Toggle password visibility
 function togglePasswordVisibility() {
@@ -41,7 +44,7 @@ function updateEndpointPlaceholder() {
 
 // Load saved settings
 function loadSettings() {
-  chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'apiProvider'], (data) => {
+  chrome.storage.sync.get(['apiKey', 'apiEndpoint', 'apiProvider', 'customGuidelines'], (data) => {
     if (data.apiProvider) {
       apiProviderSelect.value = data.apiProvider;
     }
@@ -52,6 +55,10 @@ function loadSettings() {
     
     if (data.apiEndpoint) {
       apiEndpointInput.value = data.apiEndpoint;
+    }
+    
+    if (data.customGuidelines) {
+      customGuidelinesTextarea.value = data.customGuidelines;
     }
     
     updateEndpointPlaceholder();
@@ -84,14 +91,32 @@ function saveSettings() {
   });
 }
 
+// Save custom guidelines
+function saveCustomGuidelines() {
+  const guidelines = customGuidelinesTextarea.value.trim();
+  
+  chrome.storage.sync.set({
+    customGuidelines: guidelines
+  }, () => {
+    showStatus('Custom guidelines saved successfully!', 'success');
+    
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      statusDiv.className = 'status';
+      statusDiv.textContent = '';
+    }, 3000);
+  });
+}
+
 // Reset settings
 function resetSettings() {
   apiProviderSelect.value = 'deepseek';
   apiKeyInput.value = '';
   apiEndpointInput.value = '';
+  customGuidelinesTextarea.value = '';
   updateEndpointPlaceholder();
   
-  chrome.storage.sync.remove(['apiKey', 'apiEndpoint', 'apiProvider'], () => {
+  chrome.storage.sync.remove(['apiKey', 'apiEndpoint', 'apiProvider', 'customGuidelines'], () => {
     showStatus('Settings reset successfully!', 'success');
     
     // Clear status after 3 seconds

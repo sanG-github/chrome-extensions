@@ -278,65 +278,69 @@ function findClosestTextArea(container) {
 function handleReviewButtons() {
   // Find all buttons by their labels rather than using :contains
   // This is more compatible with standard DOM APIs
-  const allButtons = document.querySelectorAll('button');
-  const reviewButtons = Array.from(allButtons).filter(button => {
-    // Check button text content
-    const text = button.textContent.trim().toLowerCase();
-    return (
-      text.includes('start a review') || 
-      text.includes('add review comment') || 
-      text.includes('add single comment') || 
-      button.hasAttribute('data-disable-with')
-    );
-  });
-  
-  reviewButtons.forEach(button => {
-    // Skip if already processed
-    if (button.dataset.polishHandled) return;
-    button.dataset.polishHandled = 'true';
+  try {
+    const allButtons = document.querySelectorAll('button');
+    const reviewButtons = Array.from(allButtons).filter(button => {
+      // Check button text content
+      const text = button.textContent.trim().toLowerCase();
+      return (
+        text.includes('start a review') || 
+        text.includes('add review comment') || 
+        text.includes('add single comment') || 
+        button.hasAttribute('data-disable-with')
+      );
+    });
     
-    // Store original click handler
-    const originalClickHandler = button.onclick;
-    
-    // Replace with our handler
-    button.onclick = async function(e) {
-      // Find the associated comment field
-      const commentContainer = findClosestCommentContainer(button);
-      if (!commentContainer) {
-        // If we can't find the comment field, just use the original handler
-        if (originalClickHandler) return originalClickHandler.call(this, e);
-        return true;
-      }
+    reviewButtons.forEach(button => {
+      // Skip if already processed
+      if (button.dataset.polishHandled) return;
+      button.dataset.polishHandled = 'true';
       
-      const commentField = commentContainer.querySelector('.comment-form-textarea');
-      if (!commentField || !commentField.value.trim()) {
-        // If no comment or empty comment, use original handler
-        if (originalClickHandler) return originalClickHandler.call(this, e);
-        return true;
-      }
+      // Store original click handler
+      const originalClickHandler = button.onclick;
       
-      // Show polishing confirmation
-      const shouldPolish = await showPolishConfirmation(commentField);
-      if (!shouldPolish) {
-        // User declined polishing, use original handler
-        if (originalClickHandler) return originalClickHandler.call(this, e);
-        return true;
-      }
-      
-      // Prevent default form submission
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Polish the comment then submit the form
-      await polishComment(commentField, commentField.value, 'review', () => {
-        // After polishing, trigger the original handler
-        if (originalClickHandler) originalClickHandler.call(this, e);
-        else button.click(); // Simple click if no handler
-      });
-      
-      return false;
-    };
-  });
+      // Replace with our handler
+      button.onclick = async function(e) {
+        // Find the associated comment field
+        const commentContainer = findClosestCommentContainer(button);
+        if (!commentContainer) {
+          // If we can't find the comment field, just use the original handler
+          if (originalClickHandler) return originalClickHandler.call(this, e);
+          return true;
+        }
+        
+        const commentField = commentContainer.querySelector('.comment-form-textarea');
+        if (!commentField || !commentField.value.trim()) {
+          // If no comment or empty comment, use original handler
+          if (originalClickHandler) return originalClickHandler.call(this, e);
+          return true;
+        }
+        
+        // Show polishing confirmation
+        const shouldPolish = await showPolishConfirmation(commentField);
+        if (!shouldPolish) {
+          // User declined polishing, use original handler
+          if (originalClickHandler) return originalClickHandler.call(this, e);
+          return true;
+        }
+        
+        // Prevent default form submission
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Polish the comment then submit the form
+        await polishComment(commentField, commentField.value, 'review', () => {
+          // After polishing, trigger the original handler
+          if (originalClickHandler) originalClickHandler.call(this, e);
+          else button.click(); // Simple click if no handler
+        });
+        
+        return false;
+      };
+    });
+  } catch (error) {
+    console.error('Error handling review buttons:', error);
+  }
 }
 
 // Find the closest comment container for a button
@@ -955,15 +959,51 @@ function setupGlobalEventListeners() {
   }, false); // Changed to false to let GitHub handle events first
   
   // Special handling for the Write tab in GitHub interface
-  const writeTabs = document.querySelectorAll('button[role="tab"], a[role="tab"]');
-  writeTabs.forEach(tab => {
-    if ((tab.textContent || '').trim().toLowerCase() === 'write') {
-      tab.addEventListener('click', () => {
-        console.log('Write tab clicked, checking for textareas');
-        setTimeout(processAllTextareas, 300);
-      });
-    }
-  });
+  try {
+    const writeTabs = document.querySelectorAll('button[role="tab"], a[role="tab"]');
+    writeTabs.forEach(tab => {
+      if ((tab.textContent || '').trim().toLowerCase() === 'write') {
+        tab.addEventListener('click', () => {
+          console.log('Write tab clicked, checking for textareas');
+          setTimeout(processAllTextareas, 300);
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error setting up write tab listeners:', error);
+  }
+  
+  // Add listeners to specific buttons that create comment areas
+  try {
+    document.querySelectorAll('button[role="tab"][data-tab="write"], a[role="tab"][data-tab="write"]').forEach(button => {
+      if (!button.dataset.polishListenerAdded) {
+        button.dataset.polishListenerAdded = 'true';
+        button.addEventListener('click', () => {
+          setTimeout(processCommentAreas, 500);
+        });
+      }
+    });
+    
+    // Find specific comment/review/reply buttons
+    const commentButtons = document.querySelectorAll(
+      'button.js-new-comment-button, ' +
+      'button.js-add-line-comment, ' +
+      'button.js-toggle-inline-comment-form, ' +
+      'button.js-start-review, ' +
+      'button.js-add-review-comment'
+    );
+    
+    commentButtons.forEach(button => {
+      if (!button.dataset.polishListenerAdded) {
+        button.dataset.polishListenerAdded = 'true';
+        button.addEventListener('click', () => {
+          setTimeout(processCommentAreas, 500);
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error setting up comment button listeners:', error);
+  }
   
   // Monitor DOM changes specifically for textareas
   const textareaObserver = new MutationObserver((mutations) => {
@@ -1084,7 +1124,7 @@ function initialize() {
   // Process existing comment areas
   processCommentAreas();
   
-  // Set up observer for new areas
+ // Set up observer for new areas
   setupObserver();
   
   // Set up button listeners
@@ -1142,35 +1182,31 @@ function processCommentAreas() {
   console.log('Scanning for GitHub comment areas...');
   
   // 1. New comments
-  document.querySelectorAll([
-    // Main PR comment form
-    '.js-new-comment-form textarea', 
-    // New issue comment
-    '.timeline-comment textarea'
-  ].join(',')).forEach(textarea => {
-    addPolishButton(textarea, COMMENT_TYPES.REVIEW);
-  });
+  try {
+    document.querySelectorAll('.js-new-comment-form textarea, .timeline-comment textarea').forEach(textarea => {
+      addPolishButton(textarea, COMMENT_TYPES.REVIEW);
+    });
+  } catch (error) {
+    console.error('Error selecting new comments:', error);
+  }
   
   // 2. Edit comments
-  document.querySelectorAll([
-    // Editing an existing comment
-    '.is-comment-editing textarea',
-    '.js-comment.is-comment-editing textarea'
-  ].join(',')).forEach(textarea => {
-    addPolishButton(textarea, COMMENT_TYPES.RESPONSE);
-  });
+  try {
+    document.querySelectorAll('.is-comment-editing textarea, .js-comment.is-comment-editing textarea').forEach(textarea => {
+      addPolishButton(textarea, COMMENT_TYPES.RESPONSE);
+    });
+  } catch (error) {
+    console.error('Error selecting edit comments:', error);
+  }
   
   // 3. Reply comments
-  document.querySelectorAll([
-    // Reply to a comment
-    '.js-inline-comment-form textarea',
-    // PR review comment
-    '.js-comment-field',
-    // Reply in a thread
-    '.js-resolvable-timeline-thread-container textarea'
-  ].join(',')).forEach(textarea => {
-    addPolishButton(textarea, COMMENT_TYPES.RESPONSE);
-  });
+  try {
+    document.querySelectorAll('.js-inline-comment-form textarea, .js-comment-field, .js-resolvable-timeline-thread-container textarea').forEach(textarea => {
+      addPolishButton(textarea, COMMENT_TYPES.RESPONSE);
+    });
+  } catch (error) {
+    console.error('Error selecting reply comments:', error);
+  }
 }
 
 // Set up observer for detecting new textareas

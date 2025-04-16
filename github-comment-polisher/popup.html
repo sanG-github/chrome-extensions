@@ -161,6 +161,30 @@
       margin-bottom: 4px;
       color: #586069;
     }
+    
+    .guidelines-description {
+      font-size: 13px;
+      color: #586069;
+      margin-bottom: 8px;
+    }
+    
+    #custom-guidelines {
+      width: 100%;
+      min-height: 100px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #d1d5da;
+      font-size: 14px;
+      resize: vertical;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+    
+    #custom-guidelines:focus {
+      outline: none;
+      border-color: #0366d6;
+      box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -198,15 +222,16 @@
   <div class="status" id="status"></div>
   
   <div class="guidelines">
-    <h2>Guidelines Followed</h2>
-    <ul>
-      <li>Be courteous and respectful</li>
-      <li>Comment about code, never authors</li>
-      <li>Be explicit and clear</li>
-      <li>Transform demands into suggestions</li>
-      <li>Avoid selective ownership language</li>
-      <li>Focus on constructive feedback</li>
-    </ul>
+    <h2>Custom Guidelines</h2>
+    <p class="guidelines-description">Add your own guidelines for polishing comments. These will be incorporated into the AI's instructions.</p>
+    <textarea id="custom-guidelines" placeholder="Enter your custom guidelines here (bullet points work best, one per line)
+Example:
+• Always use emoji in feedback
+• Use the term 'we' instead of 'you'
+• Begin suggestions with 'What about...'"></textarea>
+    <div class="button-row" style="margin-top: 8px;">
+      <button class="primary-button" id="save-guidelines-button">Save Guidelines</button>
+    </div>
   </div>
   
   <script src="popup.js"></script>
